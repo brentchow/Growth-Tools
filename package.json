@@ -1,0 +1,21 @@
+{
+  "name": "growth-tools",
+  "version": "1.0.0",
+  "description": "Growth tools for hacks on sites like Product Hunt",
+  "author": "brentchow",
+  "private": true,
+  "main": "index.js",
+  "dependencies": {
+    "csv-write-stream": "^2.0.0",
+    "fullcontact": "^1.0.0",
+    "producthunt": "^0.2.0",
+    "twit": "^2.2.5",
+    "yargs": "^6.5.0"
+  },
+  "devDependencies": {
+    "eslint": "^3.3.1",
+    "eslint-config-airbnb-base": "^5.0.2",
+    "eslint-plugin-import": "^1.13.0",
+    "eslint-plugin-promise": "^2.0.1"
+  }
+}

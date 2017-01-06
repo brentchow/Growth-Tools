@@ -1,0 +1,9 @@
+# Dependencies
+node_modules/
+yarn.lock
+
+# Output files
+exports/
+*.csv
+
+.DS_Store
