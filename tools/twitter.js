@@ -1,41 +1,118 @@
-// const TwitterMap = require('./util/twitter-map.js');
-const {TwitterPost} = require('./util/twitter-service.js');
+/* eslint-disable camelcase */
+const csv = require('csvtojson');
+
+const TwitterAPILibrary = require('./util/twitter-api-library.js');
+const {Twitter} = require('./util/twitter-service.js');
 
 exports.command = 'twitter';
 exports.description = 'Various collection of Twitter tools';
 exports.builder = (yargs) =>
   yargs
-    .usage('Usage: $0 twitter <command> <options>')
+    .usage('Usage: $0 twitter <options>')
     .option('endpoint', {
       alias: 'e',
       describe: 'The Twitter API endpoint to use',
-      required: true,
+      required: false,
       type: 'string',
-      options: ['direct_messages/new'],
+      choices: TwitterAPILibrary.endpoints,
     })
-    .option('screen_name', {
-      alias: ['s', 'handle', 'h'],
-      describe: 'The recipient\'s Twitter handle',
-      required: true,
+    .option('method', {
+      alias: 'm',
+      describe: 'The API method to use',
+      required: false,
+      type: 'string',
+      choices: ['get', 'post'],
+    })
+    .option('params', {
+      alias: ['p', 'options', 'o'],
+      describe: 'JSON string of params. See Twitter API Docs for more info - ' +
+        'https://dev.twitter.com/rest/reference',
+      required: false,
       type: 'string',
     })
-    .option('text', {
-      alias: ['t', 'message', 'm'],
-      describe: 'The message to be posted',
-      required: true,
+    .option('file', {
+      alias: ['f', 'csv'],
+      required: false,
       type: 'string',
     })
-    .example('$0 twitter -e direct_messages/new -s helloBrent -t \'foo bar\'',
+    .example('$0 twitter -e direct_messages/new ' +
+      '-p \'{"screen_name": "helloBrent", "text": "hello world"}\'',
       'Send helloBrent a direct message on Twitter');
 
-exports.handler = (argv) => {
-  const {endpoint, screen_name, text} = argv;
+exports.handler = ({method, endpoint, params, file}) => {
+  const paramsJson = JSON.parse(params);
+  if (!file) {
+    return Twitter({method, endpoint, params: paramsJson})
+      .then((__res) => {
+        console.log(`Successful Twitter call to ${endpoint}!`);
+      })
+      .catch((err) => {
+        console.log('Error:', err);
+      });
+  }
 
-  const options = {
-    screen_name,
-    text,
-  };
+  const users = [];
 
-  return TwitterPost(endpoint, options);
+  // If CSV file is used, cycle through the users and wait X seconds between API
+  // calls so we don't hit our limit right away.
+  // Rate Limits - https://support.twitter.com/articles/15364
+  return csv()
+    .fromFile(file)
+    .on('json', (user) => {
+      users.push(user);
+    })
+    .on('done', (err) => {
+      if (err) {
+        console.log('Error converting CSV to JSON:', err);
+      }
+
+      const userCount = users.length;
+
+      if (userCount > 1000) {
+        console.warn(`You have ${userCount} users and WILL exceed the daily rate limit`);
+      } else if (userCount >= 500) {
+        console.warn(`You have a high user count of ${userCount} and may hit a daily rate limit`);
+      }
+
+      function helper(i = 0) {
+        setTimeout(() => {
+          const completedCount = i + 1;
+          console.log(`\nCompleted ${completedCount} of ${userCount}`);
+
+          if (completedCount >= userCount) {
+            return console.log('Process completed');
+          }
+
+          const {screen_name, twitter_username} = users[i];
+          const mergedParams = Object.assign(paramsJson, {
+            screen_name: screen_name || twitter_username,
+          });
+
+          return Twitter({method, endpoint, params: mergedParams})
+            .then((__res) => {
+              console.log(`Successful Twitter call to ${endpoint}!`);
+
+              if (completedCount === 1000) {
+                return console.warn('Stopped the Process at 1000 because you\'re in danger of max' +
+                  'ing out the Twitter DM rate limit');
+              }
+
+              return helper(completedCount);
+            })
+            .catch((error) => {
+              if (error.errors && error.errors[0].code === 88) {
+                return console.warn(error.errors[0].message);
+              }
+
+              console.error('Error:', error);
+
+              return helper(completedCount);
+            });
+        }, 1000);
+      }
+
+      console.log(`\n${userCount} users to message`);
+
+      return helper();
+    });
 };
-
