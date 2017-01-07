@@ -10,7 +10,7 @@ exports.builder = (yargs) =>
     .option('method', {
       alias: 'm',
       describe: 'The method to look up the user',
-      options: ['email', 'twitter', 'phone'],
+      choices: ['email', 'twitter', 'phone'],
       required: true,
       type: 'string',
     })
