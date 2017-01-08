@@ -76,10 +76,7 @@ exports.handler = ({method, endpoint, params, file}) => {
 
       function helper(i = 0) {
         setTimeout(() => {
-          const completedCount = i + 1;
-          console.log(`\nCompleted ${completedCount} of ${userCount}`);
-
-          if (completedCount >= userCount) {
+          if (i + 1 > userCount) {
             return console.log('Process completed');
           }
 
@@ -89,24 +86,28 @@ exports.handler = ({method, endpoint, params, file}) => {
           });
 
           return Twitter({method, endpoint, params: mergedParams})
-            .then((__res) => {
+            .then((res) => {
+              console.log(`Completed ${i + 1} of ${userCount}`);
+              console.log(res);
               console.log(`Successful Twitter call to ${endpoint}!`);
 
-              if (completedCount === 1000) {
+              if (i + 1 === 1000) {
                 return console.warn('Stopped the Process at 1000 because you\'re in danger of max' +
                   'ing out the Twitter DM rate limit');
               }
 
-              return helper(completedCount);
+              return helper(i + 1);
             })
             .catch((error) => {
+              console.log(`Completed ${i + 1} of ${userCount}`);
+
               if (error.errors && error.errors[0].code === 88) {
                 return console.warn(error.errors[0].message);
               }
 
               console.error('Error:', error);
 
-              return helper(completedCount);
+              return helper(i + 1);
             });
         }, 1000);
       }

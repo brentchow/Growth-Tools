@@ -12,7 +12,7 @@ const T = new Twit({
 function Twitter(options) {
   const {method = TwitterMap.getMethod(options.endpoint), endpoint, params} = options;
 
-  console.log(`Sending Twitter a ${method} to ${endpoint}:`, params);
+  console.log(`\nSending Twitter a ${method} to ${endpoint}:`, params);
 
   return new Promise((resolve, reject) => (
     T[method](endpoint, params)
