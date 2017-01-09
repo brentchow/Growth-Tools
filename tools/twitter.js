@@ -32,6 +32,7 @@ exports.builder = (yargs) =>
     })
     .option('file', {
       alias: ['f', 'csv'],
+      describe: 'CSV file of `screen_name`s to contact',
       required: false,
       type: 'string',
     })
