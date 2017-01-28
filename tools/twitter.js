@@ -53,6 +53,7 @@ exports.handler = ({method, endpoint, params, file}) => {
   }
 
   const users = [];
+  let errors = 0;
 
   // If CSV file is used, cycle through the users and wait X seconds between API
   // calls so we don't hit our limit right away.
@@ -78,7 +79,8 @@ exports.handler = ({method, endpoint, params, file}) => {
       function helper(i = 0) {
         setTimeout(() => {
           if (i + 1 > userCount) {
-            return console.log('Process completed');
+            const report = `Completed ${i} of ${userCount}\nErrors: ${errors}`;
+            return console.log(report);
           }
 
           const {screen_name, twitter_username} = users[i];
@@ -88,8 +90,13 @@ exports.handler = ({method, endpoint, params, file}) => {
 
           return Twitter({method, endpoint, params: mergedParams})
             .then((res) => {
+              if (res.resp.statusCode !== 200) {
+                console.log(`Error: statusCode ${res.resp.statusCode}\nData:`,
+                  JSON.stringify(res, null, 4));
+                errors++;
+                return helper(i + 1);
+              }
               console.log(`Completed ${i + 1} of ${userCount}`);
-              console.log(res);
               console.log(`Successful Twitter call to ${endpoint}!`);
 
               if (i + 1 === 1000) {
@@ -100,7 +107,8 @@ exports.handler = ({method, endpoint, params, file}) => {
               return helper(i + 1);
             })
             .catch((error) => {
-              console.log(`Completed ${i + 1} of ${userCount}`);
+              const report = `Completed ${i + 1} of ${userCount}\nErrors: ${errors}`;
+              console.log(report);
 
               if (error.errors && error.errors[0].code === 88) {
                 return console.warn(error.errors[0].message);
